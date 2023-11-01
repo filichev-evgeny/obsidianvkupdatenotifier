@@ -1,42 +1,69 @@
-import { App, ButtonComponent, Editor, MarkdownPostProcessorContext, MarkdownRenderChild, MarkdownView, Modal, Notice, Plugin, PluginSettingTab, Setting, request } from 'obsidian';
+import { App, ButtonComponent, Editor, MarkdownPostProcessorContext, MarkdownRenderChild, MarkdownView, Modal, Notice, Plugin, PluginSettingTab, Setting, parseYaml, request } from 'obsidian';
 import { VkChecker } from './vkchecker';
+
 
 // Remember to rename these classes and interfaces!
 
 interface VkNotifierSettings {
 	mySetting: string;
 	accessToken: string;
+	maxDays: number;
+	pinLast:boolean;
 }
 
 const DEFAULT_SETTINGS: VkNotifierSettings = {
 	accessToken: 'default',
-	mySetting: ''
+	mySetting: '',
+	maxDays: 5,
+	pinLast:false
 }
 
 export default class VkNotifier extends Plugin {
 	settings: VkNotifierSettings;
 
 	postprocessor = async (content: string, el: HTMLElement, ctx: MarkdownPostProcessorContext) => {
-		let data = content.split(/\r?\n/)
+		let data: Record<string, string> = {}
+		content.trim().split(/\r?\n/).map((x) => {
+			let xx = x.split(":")
+			data[xx[0]] = xx[1]
+		})
 
 		const res = await request({
 			url: "https://api.vk.com/method/wall.get",
 			method: 'POST',
-			body: "access_token=" + this.settings.accessToken + "&domain=" + data[0].split(":")[1] + "&v=5.154"
+			body: "access_token=" + this.settings.accessToken + "&domain=" + data["group"] + "&v=5.154"
 
 		})
 		let j = JSON.parse(res)
+		const items = j["response"]["items"];
+		let fitems = items.filter((x) => {
+			return moment().diff(x["date"] * 1000, "day") <= parseInt(data["maxDays"] ? data["maxDays"] : this.settings.maxDays.toString())
+		})
 
+		if (this.settings.pinLast ||data["pinLast"]=="true"){
+			if (!fitems.includes(items[0])){
+				fitems=[items[0], ...fitems]
+			}
+		}
+		if (fitems.length == 0) {
+			el.innerHTML = "No new Posts"
+			return
+		}
 
-		let item = j["response"]["items"][0]
+		let item = fitems[0]
 		let div = el.createDiv()
-		div.innerHTML="<p>" + new Date(item["date"]) + "</p><p>"+item["text"]+"</p>"
+		div.innerHTML = this.formatPost(item)
 		el.appendChild(div);
+		
 
 
 
 		ctx.addChild(new MarkdownRenderChild(el))
 	}
+	private formatPost(item: any): string {
+		return "<p>" + new Date(item["date"] * 1000) + "</p><p>" + item["text"] + "</p>";
+	}
+
 	async onload() {
 		await this.loadSettings();
 		this.addSettingTab(new ExampleSettingTab(this.app, this));
@@ -44,9 +71,9 @@ export default class VkNotifier extends Plugin {
 
 
 		// When registering intervals, this function will automatically clear the interval when the plugin is disabled.
-		this.registerInterval(window.setInterval(() =>
-			console.log(VkChecker.test()), 19999
-		));
+		// this.registerInterval(window.setInterval(() =>
+		// 	console.log(VkChecker.test()), 19999
+		// ));
 	}
 
 	onunload() {
@@ -83,6 +110,28 @@ export class ExampleSettingTab extends PluginSettingTab {
 					.setValue(this.plugin.settings.accessToken)
 					.onChange(async (value) => {
 						this.plugin.settings.accessToken = value;
+						await this.plugin.saveSettings();
+					})
+			);
+		new Setting(containerEl)
+			.setName("maxDays")
+			.setDesc("to consider post 'old' ")
+			.addText((text) =>
+				text
+					.setValue(this.plugin.settings.maxDays.toString())
+					.onChange(async (value) => {
+						this.plugin.settings.maxDays = parseInt(value);
+						await this.plugin.saveSettings();
+					})
+			);
+		new Setting(containerEl)
+			.setName("pin last post")
+			.setDesc("even if it is old ")
+			.addToggle((text) =>
+				text
+					.setValue(this.plugin.settings.pinLast)
+					.onChange(async (value) => {
+						this.plugin.settings.pinLast=value;
 						await this.plugin.saveSettings();
 					})
 			);
