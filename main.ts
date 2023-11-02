@@ -5,12 +5,13 @@ import { VkChecker } from './vkchecker';
 // Remember to rename these classes and interfaces!
 
 interface VkNotifierSettings {
-	dateFormat: string ;
+	dateFormat: string;
 	mySetting: string;
 	accessToken: string;
 	maxDays: number;
 	pinLast: boolean;
-	style: string
+	style: string;
+	maxTextLength: number;
 }
 
 const DEFAULT_SETTINGS: VkNotifierSettings = {
@@ -18,8 +19,11 @@ const DEFAULT_SETTINGS: VkNotifierSettings = {
 	mySetting: '',
 	maxDays: 5,
 	pinLast: false,
-	style: ".pinnedVkPost{font-style:italic}",
-	dateFormat:"DD-MMMM-YYYY"
+	style: `
+	.vkGroupNotifier{}
+	.pinnedVkPost{font-style:bold}`,
+	dateFormat: "DD-MMMM-YYYY",
+	maxTextLength: 100
 }
 
 export default class VkNotifier extends Plugin {
@@ -31,10 +35,10 @@ export default class VkNotifier extends Plugin {
 			let xx = x.split(":")
 			data[xx[0]] = xx[1]
 		})
-		
+
 		let url = "access_token=" + this.settings.accessToken + "&domain=" + data["name"].trim() + "&v=5.154"
-		if (data["id"]){
-			url+="&owner_id=-"+data['id'].trim()
+		if (data["id"]) {
+			url += "&owner_id=-" + data['id'].trim()
 		}
 		const res = await request({
 			url: "https://api.vk.com/method/wall.get",
@@ -50,7 +54,7 @@ export default class VkNotifier extends Plugin {
 				return moment().diff(x["date"] * 1000, "day") <= parseInt(data["maxDays"] ? data["maxDays"] : this.settings.maxDays.toString())
 			})
 		} catch (error) {
-			el.innerHTML("Error occured, check consle for more details")
+			el.innerHTML="Error occured, check consle for more details"
 			console.log(j)
 			return
 		}
@@ -66,7 +70,7 @@ export default class VkNotifier extends Plugin {
 			return
 		}
 		let div = el.createDiv()
-		div.innerHTML = this.formatPosts(fitems, this.settings.pinLast || data["pinLast"] == "true")
+		div.innerHTML = this.formatPosts(fitems, this.settings.pinLast || data["pinLast"] == "true",parseInt(data["maxTextLength"]))
 		el.appendChild(div);
 
 
@@ -74,21 +78,23 @@ export default class VkNotifier extends Plugin {
 
 		ctx.addChild(new MarkdownRenderChild(el))
 	}
-	private formatPosts(item: any, pin: boolean): string {
+	private formatPosts(item: any, pin: boolean,maxTextLength:number): string {
+		maxTextLength=isNaN(maxTextLength)?this.settings.maxTextLength:maxTextLength
 		let r = document.createElement("table")
-		let style=document.createElement("style")
-		style.innerHTML=this.settings.style
+		let style = document.createElement("style")
+		style.innerHTML = this.settings.style
 		r.className = "vkGroupNotifier"
-		r.appendChild(style)
+
 		item.forEach((e, i) => {
 			let tr = document.createElement("tr")
-			tr.innerHTML = "<td>" + moment.unix(e["date"]).format(this.settings.dateFormat) + "</td><td>" + e["text"] + "</td>"
+			tr.innerHTML = "<td>" + moment.unix(e["date"]).format(this.settings.dateFormat) + "</td><td>" + e["text"].slice(0,maxTextLength) + "</td>"
 			if (i == 0 && pin) {
 				tr.className = "pinnedVkPost"
 			}
 			r.appendChild(tr)
 
 		});
+		r.appendChild(style)
 		return r.outerHTML;
 	}
 
@@ -182,6 +188,17 @@ export class ExampleSettingTab extends PluginSettingTab {
 					.setValue(this.plugin.settings.dateFormat)
 					.onChange(async (value) => {
 						this.plugin.settings.dateFormat = value;
+						await this.plugin.saveSettings();
+					})
+			);
+		new Setting(containerEl)
+			.setName("maxTextLength")
+			.setDesc("from a post to show in a table")
+			.addText((text) =>
+				text
+					.setValue(this.plugin.settings.maxTextLength.toString())
+					.onChange(async (value) => {
+						this.plugin.settings.maxTextLength = parseInt(value);
 						await this.plugin.saveSettings();
 					})
 			);
