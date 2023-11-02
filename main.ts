@@ -1,8 +1,48 @@
-import { App, ButtonComponent, Editor, MarkdownPostProcessorContext, MarkdownRenderChild, MarkdownView, Modal, Notice, Plugin, PluginSettingTab, Setting, parseYaml, request } from 'obsidian';
+import { App, ButtonComponent, Editor, MarkdownPostProcessorContext, MarkdownRenderChild, MarkdownView, Modal, Notice, Plugin, PluginSettingTab, Setting, View, Workspace, WorkspaceTabs, parseYaml, request } from 'obsidian';
 import { VkChecker } from './vkchecker';
+import { normalize } from 'path';
 
 
-// Remember to rename these classes and interfaces!
+export class GetTokenModal extends Modal {
+	result: string;
+	onSubmit: (result: string) => void;
+
+	constructor(app: App, onSubmit: (result: string | null) => void) {
+		super(app);
+		this.onSubmit = onSubmit;
+	}
+
+	onOpen() {
+		const { contentEl } = this;
+
+		contentEl.style.display = "block"
+		contentEl.style.height = "50vh"
+
+		contentEl.createEl("br")
+		let b = document.createElement('webview')
+		new Setting(contentEl)
+			.addButton((btn) =>
+				btn
+					.setButtonText("Press this after granting access")
+					.setCta()
+					.setWarning()
+					.onClick(() => {
+						this.close();
+						this.onSubmit(b.getAttribute("src")!);
+					}));
+
+		b.setAttribute('src', "https://oauth.vk.com/authorize?client_id=" + VkChecker.appId + "&display=page&redirect_uri=https://oauth.vk.com/blank.html&scope=" + 262144 + 65536 + "&response_type=token")
+
+		contentEl.appendChild(b)
+		b.style.display = "block"
+
+	}
+
+	onClose() {
+		let { contentEl } = this;
+		contentEl.empty();
+	}
+}
 
 interface VkNotifierSettings {
 	dateFormat: string;
@@ -54,7 +94,7 @@ export default class VkNotifier extends Plugin {
 				return moment().diff(x["date"] * 1000, "day") <= parseInt(data["maxDays"] ? data["maxDays"] : this.settings.maxDays.toString())
 			})
 		} catch (error) {
-			el.innerHTML="Error occured, check consle for more details"
+			el.innerHTML = "Error occured, check consle for more details"
 			console.log(j)
 			return
 		}
@@ -70,7 +110,7 @@ export default class VkNotifier extends Plugin {
 			return
 		}
 		let div = el.createDiv()
-		div.innerHTML ="<a href='https://vk.com/"+(data['id']?"club"+data["id"].trim():data["name"])+"'>Open Page</a>"+ this.formatPosts(fitems, this.settings.pinLast || data["pinLast"] == "true",parseInt(data["maxTextLength"]))
+		div.innerHTML = "<a href='https://vk.com/" + (data['id'] ? "club" + data["id"].trim() : data["name"]) + "'>Open Page</a>" + this.formatPosts(fitems, this.settings.pinLast || data["pinLast"] == "true", parseInt(data["maxTextLength"]))
 		el.appendChild(div);
 
 
@@ -78,8 +118,8 @@ export default class VkNotifier extends Plugin {
 
 		ctx.addChild(new MarkdownRenderChild(el))
 	}
-	private formatPosts(item: any, pin: boolean,maxTextLength:number): string {
-		maxTextLength=isNaN(maxTextLength)?this.settings.maxTextLength:maxTextLength
+	private formatPosts(item: any, pin: boolean, maxTextLength: number): string {
+		maxTextLength = isNaN(maxTextLength) ? this.settings.maxTextLength : maxTextLength
 		let r = document.createElement("table")
 		let style = document.createElement("style")
 		style.innerHTML = this.settings.style
@@ -87,7 +127,7 @@ export default class VkNotifier extends Plugin {
 
 		item.forEach((e, i) => {
 			let tr = document.createElement("tr")
-			tr.innerHTML = "<td>" + moment.unix(e["date"]).format(this.settings.dateFormat) + "</td><td>" + e["text"].slice(0,maxTextLength) + "</td>"
+			tr.innerHTML = "<td>" + moment.unix(e["date"]).format(this.settings.dateFormat) + "</td><td>" + e["text"].slice(0, maxTextLength) + "</td>"
 			if (i == 0 && pin) {
 				tr.className = "pinnedVkPost"
 			}
@@ -153,8 +193,18 @@ export class ExampleSettingTab extends PluginSettingTab {
 				btn.setButtonText("get access token")
 				btn.setTooltip("FFFFFFFFF")
 				btn.onClick(async (e) => {
+					var m = new GetTokenModal(this.app, (r) => {
+						try {
+							let regexp = /access_token=(.*)&e/g
+							this.plugin.settings.accessToken = regexp.exec(r!)![0].slice(13)
+							new Notice("Done! I don't know how to update settings page , so please re-enter into the settings if you want to see token. But everything should be fine now")
+						}
+						catch(e)
+						{
+							new Notice("Something went wrong, can't get access token")
+						}
+					}).open()
 
-					window.open("https://oauth.vk.com/authorize?client_id=" + VkChecker.appId + "&display=page&redirect_uri=https://oauth.vk.com/blank.html&scope=" + 262144 + 65536 + "&response_type=token")
 				})
 			});
 
@@ -217,6 +267,7 @@ export class ExampleSettingTab extends PluginSettingTab {
 						await this.plugin.saveSettings();
 					})
 			);
+
 
 
 
