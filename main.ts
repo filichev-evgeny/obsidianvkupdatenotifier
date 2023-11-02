@@ -8,14 +8,14 @@ interface VkNotifierSettings {
 	mySetting: string;
 	accessToken: string;
 	maxDays: number;
-	pinLast:boolean;
+	pinLast: boolean;
 }
 
 const DEFAULT_SETTINGS: VkNotifierSettings = {
 	accessToken: 'default',
 	mySetting: '',
 	maxDays: 5,
-	pinLast:false
+	pinLast: false
 }
 
 export default class VkNotifier extends Plugin {
@@ -31,37 +31,53 @@ export default class VkNotifier extends Plugin {
 		const res = await request({
 			url: "https://api.vk.com/method/wall.get",
 			method: 'POST',
-			body: "access_token=" + this.settings.accessToken + "&domain=" + data["group"] + "&v=5.154"
+			body: "access_token=" + this.settings.accessToken + "&domain=" + data["name"] + "&owner_id=-" + data["id"].trim() + "&v=5.154"
 
 		})
 		let j = JSON.parse(res)
-		const items = j["response"]["items"];
-		let fitems = items.filter((x) => {
-			return moment().diff(x["date"] * 1000, "day") <= parseInt(data["maxDays"] ? data["maxDays"] : this.settings.maxDays.toString())
-		})
+		try {
 
-		if (this.settings.pinLast ||data["pinLast"]=="true"){
-			if (!fitems.includes(items[0])){
-				fitems=[items[0], ...fitems]
+			var items = j["response"]["items"];
+			var fitems = items.filter((x) => {
+				return moment().diff(x["date"] * 1000, "day") <= parseInt(data["maxDays"] ? data["maxDays"] : this.settings.maxDays.toString())
+			})
+		} catch (error) {
+			console.log(j)
+		}
+
+
+		if (this.settings.pinLast || data["pinLast"] == "true") {
+			if (!fitems.includes(items[0])) {
+				fitems.unshift(items[0])
 			}
 		}
 		if (fitems.length == 0) {
 			el.innerHTML = "No new Posts"
 			return
 		}
-
-		let item = fitems[0]
 		let div = el.createDiv()
-		div.innerHTML = this.formatPost(item)
+		div.innerHTML = this.formatPosts(fitems, this.settings.pinLast || data["pinLast"] == "true")
 		el.appendChild(div);
-		
+
 
 
 
 		ctx.addChild(new MarkdownRenderChild(el))
 	}
-	private formatPost(item: any): string {
-		return "<p>" + new Date(item["date"] * 1000) + "</p><p>" + item["text"] + "</p>";
+	private formatPosts(item: any, pin: boolean): string {
+		console.log(item)
+		let r = document.createElement("table")
+		r.className="vkGroupNotifier"
+		item.forEach((e, i) => {
+			let tr = document.createElement("tr")
+			tr.innerHTML = "<td>" + new Date(e["date"] * 1000) + "</td><td>" + e["text"] + "</td>"
+			if (i == 0 && pin) {
+				tr.className = "pinnedVkPost"
+			}
+			r.appendChild(tr)
+
+		});
+		return r.outerHTML;
 	}
 
 	async onload() {
@@ -131,7 +147,7 @@ export class ExampleSettingTab extends PluginSettingTab {
 				text
 					.setValue(this.plugin.settings.pinLast)
 					.onChange(async (value) => {
-						this.plugin.settings.pinLast=value;
+						this.plugin.settings.pinLast = value;
 						await this.plugin.saveSettings();
 					})
 			);
