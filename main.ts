@@ -33,10 +33,10 @@ export default class VkNotifier extends Plugin {
 		let data: Record<string, string> = {}
 		content.trim().split(/\r?\n/).map((x) => {
 			let xx = x.split(":")
-			data[xx[0]] = xx[1]
+			data[xx[0]] = xx[1].trim()
 		})
 
-		let url = "access_token=" + this.settings.accessToken + "&domain=" + data["name"].trim() + "&v=5.154"
+		let url = "access_token=" + this.settings.accessToken + "&domain=" + data["name"] + "&v=5.154"
 		if (data["id"]) {
 			url += "&owner_id=-" + data['id'].trim()
 		}
@@ -70,7 +70,7 @@ export default class VkNotifier extends Plugin {
 			return
 		}
 		let div = el.createDiv()
-		div.innerHTML = this.formatPosts(fitems, this.settings.pinLast || data["pinLast"] == "true",parseInt(data["maxTextLength"]))
+		div.innerHTML ="<a href='https://vk.com/"+(data['id']?"club"+data["id"].trim():data["name"])+"'>Open Page</a>"+ this.formatPosts(fitems, this.settings.pinLast || data["pinLast"] == "true",parseInt(data["maxTextLength"]))
 		el.appendChild(div);
 
 
