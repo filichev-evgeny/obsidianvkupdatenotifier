@@ -5,6 +5,7 @@ import { VkChecker } from './vkchecker';
 // Remember to rename these classes and interfaces!
 
 interface VkNotifierSettings {
+	dateFormat: string ;
 	mySetting: string;
 	accessToken: string;
 	maxDays: number;
@@ -17,7 +18,8 @@ const DEFAULT_SETTINGS: VkNotifierSettings = {
 	mySetting: '',
 	maxDays: 5,
 	pinLast: false,
-	style: ".pinnedVkPost{font-style:italic}"
+	style: ".pinnedVkPost{font-style:italic}",
+	dateFormat:"DD-MMMM-YYYY"
 }
 
 export default class VkNotifier extends Plugin {
@@ -80,7 +82,7 @@ export default class VkNotifier extends Plugin {
 		r.appendChild(style)
 		item.forEach((e, i) => {
 			let tr = document.createElement("tr")
-			tr.innerHTML = "<td>" + new Date(e["date"] * 1000) + "</td><td>" + e["text"] + "</td>"
+			tr.innerHTML = "<td>" + moment.unix(e["date"]).format(this.settings.dateFormat) + "</td><td>" + e["text"] + "</td>"
 			if (i == 0 && pin) {
 				tr.className = "pinnedVkPost"
 			}
@@ -169,6 +171,17 @@ export class ExampleSettingTab extends PluginSettingTab {
 					.setValue(this.plugin.settings.pinLast)
 					.onChange(async (value) => {
 						this.plugin.settings.pinLast = value;
+						await this.plugin.saveSettings();
+					})
+			);
+		new Setting(containerEl)
+			.setName("dateFormat")
+			.setDesc("standart js formatting")
+			.addText((text) =>
+				text
+					.setValue(this.plugin.settings.dateFormat)
+					.onChange(async (value) => {
+						this.plugin.settings.dateFormat = value;
 						await this.plugin.saveSettings();
 					})
 			);
