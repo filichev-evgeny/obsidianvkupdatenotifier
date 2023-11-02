@@ -9,13 +9,15 @@ interface VkNotifierSettings {
 	accessToken: string;
 	maxDays: number;
 	pinLast: boolean;
+	style: string
 }
 
 const DEFAULT_SETTINGS: VkNotifierSettings = {
 	accessToken: 'default',
 	mySetting: '',
 	maxDays: 5,
-	pinLast: false
+	pinLast: false,
+	style: ".pinnedVkPost{font-style:italic}"
 }
 
 export default class VkNotifier extends Plugin {
@@ -27,11 +29,15 @@ export default class VkNotifier extends Plugin {
 			let xx = x.split(":")
 			data[xx[0]] = xx[1]
 		})
-
+		
+		let url = "access_token=" + this.settings.accessToken + "&domain=" + data["name"].trim() + "&v=5.154"
+		if (data["id"]){
+			url+="&owner_id=-"+data['id'].trim()
+		}
 		const res = await request({
 			url: "https://api.vk.com/method/wall.get",
 			method: 'POST',
-			body: "access_token=" + this.settings.accessToken + "&domain=" + data["name"] + "&owner_id=-" + data["id"].trim() + "&v=5.154"
+			body: url
 
 		})
 		let j = JSON.parse(res)
@@ -42,7 +48,9 @@ export default class VkNotifier extends Plugin {
 				return moment().diff(x["date"] * 1000, "day") <= parseInt(data["maxDays"] ? data["maxDays"] : this.settings.maxDays.toString())
 			})
 		} catch (error) {
+			el.innerHTML("Error occured, check consle for more details")
 			console.log(j)
+			return
 		}
 
 
@@ -65,9 +73,11 @@ export default class VkNotifier extends Plugin {
 		ctx.addChild(new MarkdownRenderChild(el))
 	}
 	private formatPosts(item: any, pin: boolean): string {
-		console.log(item)
 		let r = document.createElement("table")
-		r.className="vkGroupNotifier"
+		let style=document.createElement("style")
+		style.innerHTML=this.settings.style
+		r.className = "vkGroupNotifier"
+		r.appendChild(style)
 		item.forEach((e, i) => {
 			let tr = document.createElement("tr")
 			tr.innerHTML = "<td>" + new Date(e["date"] * 1000) + "</td><td>" + e["text"] + "</td>"
@@ -130,6 +140,17 @@ export class ExampleSettingTab extends PluginSettingTab {
 					})
 			);
 		new Setting(containerEl)
+			.setName("TEST")
+			.addButton((btn) => {
+				btn.setButtonText("get access token")
+				btn.setTooltip("FFFFFFFFF")
+				btn.onClick(async (e) => {
+
+					window.open("https://oauth.vk.com/authorize?client_id=" + VkChecker.appId + "&display=page&redirect_uri=https://oauth.vk.com/blank.html&scope=" + 262144 + 65536 + "&response_type=token")
+				})
+			});
+
+		new Setting(containerEl)
 			.setName("maxDays")
 			.setDesc("to consider post 'old' ")
 			.addText((text) =>
@@ -152,15 +173,21 @@ export class ExampleSettingTab extends PluginSettingTab {
 					})
 			);
 		new Setting(containerEl)
-			.setName("TEST")
-			.addButton((btn) => {
-				btn.setButtonText("get access token")
-				btn.setTooltip("FFFFFFFFF")
-				btn.onClick(async (e) => {
+			.setName("style")
+			.setDesc(`
+			Css to decorate table.
+			Table class "vkGroupNotifier" 
+			Pinned post class "pinnedVkPost"
+			`)
+			.addTextArea((text) =>
+				text
+					.setValue(this.plugin.settings.style)
+					.onChange(async (value) => {
+						this.plugin.settings.style = value;
+						await this.plugin.saveSettings();
+					})
+			);
 
-					window.open("https://oauth.vk.com/authorize?client_id=" + VkChecker.appId + "&display=page&redirect_uri=https://oauth.vk.com/blank.html&scope=" + 262144 + 65536 + "&response_type=token")
-				})
-			});
 
 
 	}
