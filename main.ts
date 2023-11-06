@@ -1,6 +1,8 @@
-import { App, ButtonComponent, Editor, MarkdownPostProcessorContext, MarkdownRenderChild, MarkdownView, Modal, Notice, Plugin, PluginSettingTab, Setting, View, Workspace, WorkspaceTabs, parseYaml, request } from 'obsidian';
+import { App, MarkdownPostProcessorContext, MarkdownRenderChild, Modal, Notice, Platform, Plugin, PluginSettingTab, Setting, request } from 'obsidian';
 import { VkChecker } from './vkchecker';
-import { normalize } from 'path';
+
+import moment from 'moment';
+
 
 
 export class GetTokenModal extends Modal {
@@ -15,10 +17,36 @@ export class GetTokenModal extends Modal {
 	onOpen() {
 		const { contentEl } = this;
 
-		contentEl.style.display = "block"
-		contentEl.style.height = "50vh"
-
 		contentEl.createEl("br")
+
+		const url = "https://oauth.vk.com/authorize?client_id=" + VkChecker.appId + "&display=page&redirect_uri=https://oauth.vk.com/blank.html&scope=" + 262144 + 65536 + "&response_type=token";
+		if ( (Platform.isIosApp || Platform.isAndroidApp)) {
+			const electron = require('electron')
+			const bw = electron.BrowserWindow;
+			console.log(electron)
+			let p = document.createElement('p')
+			p.textContent = "Since I can't make WebView to work on Android, I must ask you to copy-paste auth link manually"
+			contentEl.appendChild(p)
+			let text = document.createElement('input')
+			contentEl.appendChild(text)
+			let a = document.createElement('a')
+			a.href = url
+			a.textContent = "Open auth window"
+			contentEl.appendChild(a)
+			new Setting(contentEl)
+				.addButton((btn) =>
+					btn
+						.setButtonText("Press this after granting access")
+						.setCta()
+						.setWarning()
+						.onClick(() => {
+							this.close();
+							this.onSubmit(text.textContent!);
+
+						}));
+			window.open(url)
+			return
+		}
 		let b = document.createElement('webview')
 		new Setting(contentEl)
 			.addButton((btn) =>
@@ -31,10 +59,12 @@ export class GetTokenModal extends Modal {
 						this.onSubmit(b.getAttribute("src")!);
 					}));
 
-		b.setAttribute('src', "https://oauth.vk.com/authorize?client_id=" + VkChecker.appId + "&display=page&redirect_uri=https://oauth.vk.com/blank.html&scope=" + 262144 + 65536 + "&response_type=token")
-
+		b.setAttribute('src', url)
 		contentEl.appendChild(b)
-		b.style.display = "block"
+		b.setAttribute('useragent', "Mozilla/5.0 (Macintosh; U; Intel Mac OS X 10_5_6; en-US) AppleWebKit/603.25 (KHTML, like Gecko) Chrome/48.0.1971.300 Safari/537")
+		b.shadowRoot!.querySelector("iframe")!.style.height = "70vh"
+
+
 
 	}
 
@@ -90,11 +120,11 @@ export default class VkNotifier extends Plugin {
 		try {
 
 			var items = j["response"]["items"];
-			var fitems = items.filter((x) => {
+			var fitems = items.filter((x: { [x: string]: number; }) => {
 				return moment().diff(x["date"] * 1000, "day") <= parseInt(data["maxDays"] ? data["maxDays"] : this.settings.maxDays.toString())
 			})
 		} catch (error) {
-			el.innerHTML = "Error occured, check consle for more details"
+			el.innerHTML = j["error"]['error_msg'].toString()
 			console.log(j)
 			return
 		}
@@ -112,10 +142,6 @@ export default class VkNotifier extends Plugin {
 		let div = el.createDiv()
 		div.innerHTML = "<a href='https://vk.com/" + (data['id'] ? "club" + data["id"].trim() : data["name"]) + "'>Open Page</a>" + this.formatPosts(fitems, this.settings.pinLast || data["pinLast"] == "true", parseInt(data["maxTextLength"]))
 		el.appendChild(div);
-
-
-
-
 		ctx.addChild(new MarkdownRenderChild(el))
 	}
 	private formatPosts(item: any, pin: boolean, maxTextLength: number): string {
@@ -125,9 +151,9 @@ export default class VkNotifier extends Plugin {
 		style.innerHTML = this.settings.style
 		r.className = "vkGroupNotifier"
 
-		item.forEach((e, i) => {
+		item.forEach((e: { [x: string]: string; }, i: number) => {
 			let tr = document.createElement("tr")
-			tr.innerHTML = "<td>" + moment.unix(e["date"]).format(this.settings.dateFormat) + "</td><td>" + e["text"].slice(0, maxTextLength) + "</td>"
+			tr.innerHTML = "<td>" + moment.unix(e["date"] as unknown as number).format(this.settings.dateFormat) + "</td><td>" + e["text"].slice(0, maxTextLength) + "</td>"
 			if (i == 0 && pin) {
 				tr.className = "pinnedVkPost"
 			}
@@ -176,31 +202,21 @@ export class ExampleSettingTab extends PluginSettingTab {
 		let { containerEl } = this;
 
 		containerEl.empty();
+		
 		new Setting(containerEl)
-			.setName("access token")
-			.setDesc("to get access to your groups")
-			.addText((text) =>
-				text
-					.setValue(this.plugin.settings.accessToken)
-					.onChange(async (value) => {
-						this.plugin.settings.accessToken = value;
-						await this.plugin.saveSettings();
-					})
-			);
-		new Setting(containerEl)
-			.setName("TEST")
+			.setName("Plugin requires access token to get posts from groups")
 			.addButton((btn) => {
 				btn.setButtonText("get access token")
 				btn.setTooltip("FFFFFFFFF")
 				btn.onClick(async (e) => {
-					var m = new GetTokenModal(this.app, (r) => {
+					var m = new GetTokenModal(this.app, async (r) => {
 						try {
 							let regexp = /access_token=(.*)&e/g
 							this.plugin.settings.accessToken = regexp.exec(r!)![0].slice(13)
-							new Notice("Done! I don't know how to update settings page , so please re-enter into the settings if you want to see token. But everything should be fine now")
+							await this.plugin.saveSettings();
+							new Notice("Done!")
 						}
-						catch(e)
-						{
+						catch (e) {
 							new Notice("Something went wrong, can't get access token")
 						}
 					}).open()
