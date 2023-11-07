@@ -1,10 +1,8 @@
 import { App, MarkdownPostProcessorContext, MarkdownRenderChild, Modal, Notice, Platform, Plugin, PluginSettingTab, Setting, request } from 'obsidian';
-import { VkChecker } from './vkchecker';
-
 import moment from 'moment';
 
 
-
+const appId=51781583;
 export class GetTokenModal extends Modal {
 	result: string;
 	onSubmit: (result: string) => void;
@@ -19,7 +17,7 @@ export class GetTokenModal extends Modal {
 
 		contentEl.createEl("br")
 
-		const url = "https://oauth.vk.com/authorize?client_id=" + VkChecker.appId + "&display=page&redirect_uri=https://oauth.vk.com/blank.html&scope=" + 262144 + 65536 + "&response_type=token";
+		const url = "https://oauth.vk.com/authorize?client_id=" + appId + "&display=page&redirect_uri=https://oauth.vk.com/blank.html&scope=" + 262144 + 65536 + "&response_type=token";
 		if ( (Platform.isIosApp || Platform.isAndroidApp)) {
 			const electron = require('electron')
 			const bw = electron.BrowserWindow;
@@ -140,11 +138,11 @@ export default class VkNotifier extends Plugin {
 			return
 		}
 		let div = el.createDiv()
-		div.innerHTML = "<a href='https://vk.com/" + (data['id'] ? "club" + data["id"].trim() : data["name"]) + "'>Open Page</a>" + this.formatPosts(fitems, this.settings.pinLast || data["pinLast"] == "true", parseInt(data["maxTextLength"]))
+		div.innerHTML = "<a href='https://vk.com/" + (data['id'] ? "club" + data["id"].trim() : data["name"]) + "'>Open Page</a>" + this.formatPosts(fitems, this.settings.pinLast || data["pinLast"] == "true", parseInt(data["maxTextLength"]?data["maxTextLength"]:this.settings.maxTextLength.toString()),data["dateFormat"]?data["dateFormat"]:this.settings.dateFormat)
 		el.appendChild(div);
 		ctx.addChild(new MarkdownRenderChild(el))
 	}
-	private formatPosts(item: any, pin: boolean, maxTextLength: number): string {
+	private formatPosts(item: any, pin: boolean, maxTextLength: number,dateFormat:string): string {
 		maxTextLength = isNaN(maxTextLength) ? this.settings.maxTextLength : maxTextLength
 		let r = document.createElement("table")
 		let style = document.createElement("style")
@@ -153,7 +151,7 @@ export default class VkNotifier extends Plugin {
 
 		item.forEach((e: { [x: string]: string; }, i: number) => {
 			let tr = document.createElement("tr")
-			tr.innerHTML = "<td>" + moment.unix(e["date"] as unknown as number).format(this.settings.dateFormat) + "</td><td>" + e["text"].slice(0, maxTextLength) + "</td>"
+			tr.innerHTML = "<td>" + moment.unix(e["date"] as unknown as number).format(dateFormat) + "</td><td>" + e["text"].slice(0, maxTextLength) + "</td>"
 			if (i == 0 && pin) {
 				tr.className = "pinnedVkPost"
 			}
@@ -170,14 +168,10 @@ export default class VkNotifier extends Plugin {
 		this.registerMarkdownCodeBlockProcessor('vk-group-notifier', this.postprocessor);
 
 
-		// When registering intervals, this function will automatically clear the interval when the plugin is disabled.
-		// this.registerInterval(window.setInterval(() =>
-		// 	console.log(VkChecker.test()), 19999
-		// ));
+
 	}
 
 	onunload() {
-
 	}
 
 	async loadSettings() {
@@ -207,7 +201,7 @@ export class ExampleSettingTab extends PluginSettingTab {
 			.setName("Plugin requires access token to get posts from groups")
 			.addButton((btn) => {
 				btn.setButtonText("get access token")
-				btn.setTooltip("FFFFFFFFF")
+				btn.setTooltip("Asked permissions: group, offline")
 				btn.onClick(async (e) => {
 					var m = new GetTokenModal(this.app, async (r) => {
 						try {
