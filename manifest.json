@@ -1,6 +1,6 @@
 {
 	"id": "vk-group-notifier",
-	"name": "VK group notifier",
+	"name": "Vk group notifier",
 	"version": "1.0.0",
 	"minAppVersion": "0.15.0",
 	"description": "This plugin helps you track news posts in the VK groups",
