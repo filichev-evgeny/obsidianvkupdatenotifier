@@ -5,25 +5,25 @@ This  plugin gives you ability to check new posts on the vk.com website
 ## How to use
 
 - **vk.com account is required**. you can log in in the settings tab of the plugin. The requested permissions are : groups, offline. The authorization is handled by vk.com, plugin have no access to user's login/pass.
-- create codeblock with "name:" argument
+- create codeblock ``vk-group-notifier`` with "name:" argument. (use ```at the begining of the block and``` )
 
-```vk-group-notifier
+\```vk-group-notifier
   name:nameOfTheGroup
-```
+\```
 
-```vk-group-notifier
+\```vk-group-notifier
 id: 12345
-```
+\```
 
 * you can overwrite any specific parameters for each code section
 
-```vk-group-notifier
+\```vk-group-notifier
  name:groupName
  maxDays:23
  pinLast:true
  maxTextLength:15
  dateFormat:DD-MMMM-YYYY
-```
+\```
 
 ## Manually installing the plugin
 
