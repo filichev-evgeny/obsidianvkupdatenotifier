@@ -8,23 +8,22 @@ This  plugin gives you ability to check new posts on the vk.com website
 - create codeblock ``vk-group-notifier`` with "name:" argument. (use \``` at the begining of the block and \``` at the end )
 
 
-```
 ```vk-group-notifier
   name:nameOfTheGroup
 ```
-```
 
-* if group has no short name, you can use its "id". if both "name" and "id" are present, "id" will be used
+* if group has no short name, you can use its "id". if both "name" and "id" are present, "id" will be used.
 
-```
+
+
 ```vk-group-notifier
 id: 12345
 ```
-```
+
 
 * you can overwrite any specific parameters for each code section
 
-```
+
 ```vk-group-notifier
  name:groupName
  maxDays:23
@@ -32,7 +31,7 @@ id: 12345
  maxTextLength:15
  dateFormat:DD-MMMM-YYYY
 ```
-```
+
 
 ## Manually installing the plugin
 
