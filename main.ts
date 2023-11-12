@@ -167,7 +167,7 @@ export default class VkNotifier extends Plugin {
 
 	async onload() {
 		await this.loadSettings();
-		this.addSettingTab(new ExampleSettingTab(this.app, this));
+		this.addSettingTab(new VkNotifierSettingsTab(this.app, this));
 		this.registerMarkdownCodeBlockProcessor('vk-group-notifier', this.postprocessor);
 
 
@@ -187,7 +187,7 @@ export default class VkNotifier extends Plugin {
 }
 
 
-export class ExampleSettingTab extends PluginSettingTab {
+export class VkNotifierSettingsTab extends PluginSettingTab {
 	plugin: VkNotifier;
 
 	constructor(app: App, plugin: VkNotifier) {
@@ -222,7 +222,7 @@ export class ExampleSettingTab extends PluginSettingTab {
 			});
 
 		new Setting(containerEl)
-			.setName("maxDays")
+			.setName("Maximum days (maxDays)")
 			.setDesc("to consider post 'old' ")
 			.addText((text) =>
 				text
@@ -233,7 +233,7 @@ export class ExampleSettingTab extends PluginSettingTab {
 					})
 			);
 		new Setting(containerEl)
-			.setName("pin last post")
+			.setName("Pin last post (pinLast)")
 			.setDesc("even if it is old ")
 			.addToggle((text) =>
 				text
@@ -244,7 +244,7 @@ export class ExampleSettingTab extends PluginSettingTab {
 					})
 			);
 		new Setting(containerEl)
-			.setName("dateFormat")
+			.setName("Date format (dateFormat)")
 			.setDesc("standart js formatting")
 			.addText((text) =>
 				text
@@ -255,7 +255,7 @@ export class ExampleSettingTab extends PluginSettingTab {
 					})
 			);
 		new Setting(containerEl)
-			.setName("maxTextLength")
+			.setName("Maximum amount of symbols (maxTextLength)")
 			.setDesc("from a post to show in a table")
 			.addText((text) =>
 				text
@@ -266,11 +266,11 @@ export class ExampleSettingTab extends PluginSettingTab {
 					})
 			);
 		new Setting(containerEl)
-			.setName("style")
+			.setName("Style (style)")
 			.setDesc(`
 			Css to decorate table.
-			Table class "vkGroupNotifier" 
-			Pinned post class "pinnedVkPost"
+			table class "vkGroupNotifier", 
+			pinned post class "pinnedVkPost"
 			`)
 			.addTextArea((text) =>
 				text
