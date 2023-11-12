@@ -74,7 +74,7 @@ export class GetTokenModal extends Modal {
 
 interface VkNotifierSettings {
 	dateFormat: string;
-	mySetting: string;
+	
 	accessToken: string;
 	maxDays: number;
 	pinLast: boolean;
@@ -84,7 +84,7 @@ interface VkNotifierSettings {
 
 const DEFAULT_SETTINGS: VkNotifierSettings = {
 	accessToken: 'default',
-	mySetting: '',
+	
 	maxDays: 5,
 	pinLast: false,
 	style: `
@@ -115,10 +115,12 @@ export default class VkNotifier extends Plugin {
 
 		})
 		let j = JSON.parse(res)
+		let fitems
+		let items 
 		try {
 
-			var items = j["response"]["items"];
-			var fitems = items.filter((x: { [x: string]: number; }) => {
+			items = j["response"]["items"];
+			fitems = items.filter((x: { [x: string]: number; }) => {
 				return moment().diff(x["date"] * 1000, "day") <= parseInt(data["maxDays"] ? data["maxDays"] : this.settings.maxDays.toString())
 			})
 		} catch (error) {
@@ -138,28 +140,29 @@ export default class VkNotifier extends Plugin {
 			return
 		}
 		let div = el.createDiv()
-		div.setText("<a href='https://vk.com/" + (data['id'] ? "club" + data["id"].trim() : data["name"]) + "'>Open Page</a>" + this.formatPosts(fitems, this.settings.pinLast || data["pinLast"] == "true", parseInt(data["maxTextLength"] ? data["maxTextLength"] : this.settings.maxTextLength.toString()), data["dateFormat"] ? data["dateFormat"] : this.settings.dateFormat))
+		div.createEl("a",{href:"https://vk.com/' + (data['id'] ? 'club' + data['id'].trim() : data['name']) + '",text:"Open Page"})
+		div.appendChild(this.formatPosts(fitems, this.settings.pinLast || data["pinLast"] == "true", parseInt(data["maxTextLength"] ? data["maxTextLength"] : this.settings.maxTextLength.toString()), data["dateFormat"] ? data["dateFormat"] : this.settings.dateFormat))
 		el.appendChild(div);
 		ctx.addChild(new MarkdownRenderChild(el))
 	}
-	private formatPosts(item: any, pin: boolean, maxTextLength: number, dateFormat: string): string {
+	private formatPosts(item: any, pin: boolean, maxTextLength: number, dateFormat: string): HTMLElement {
 		maxTextLength = isNaN(maxTextLength) ? this.settings.maxTextLength : maxTextLength
 		let r = document.createElement("table")
-		let style = document.createElement("style")
-		style.setCssStyles( this.settings.style)
+		let style = r.createEl("style",{text:this.settings.style})
 		r.className = "vkGroupNotifier"
 
 		item.forEach((e: { [x: string]: string; }, i: number) => {
-			let tr = document.createElement("tr")
-			tr.setText( "<td>" + moment.unix(e["date"] as unknown as number).format(dateFormat) + "</td><td>" + e["text"].slice(0, maxTextLength) + "</td>")
+			let tr = r.createEl("tr")
+			tr.createEl("td",{text: moment.unix(e["date"] as unknown as number).format(dateFormat)})
+			tr.createEl('td',{text:e["text"].slice(0, maxTextLength)})
 			if (i == 0 && pin) {
 				tr.className = "pinnedVkPost"
 			}
-			r.appendChild(tr)
+			
 
 		});
 		r.appendChild(style)
-		return r.outerHTML;
+		return r;
 	}
 
 	async onload() {
@@ -203,7 +206,7 @@ export class ExampleSettingTab extends PluginSettingTab {
 				btn.setButtonText("get access token")
 				btn.setTooltip("Asked permissions: group, offline")
 				btn.onClick(async (e) => {
-					var m = new GetTokenModal(this.app, async (r) => {
+					let m = new GetTokenModal(this.app, async (r) => {
 						try {
 							let regexp = /access_token=(.*)&e/g
 							this.plugin.settings.accessToken = regexp.exec(r!)![0].slice(13)
