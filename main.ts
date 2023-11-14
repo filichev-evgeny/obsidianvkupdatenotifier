@@ -19,44 +19,45 @@ export class GetTokenModal extends Modal {
 
 		const url = "https://oauth.vk.com/authorize?client_id=" + appId + "&display=page&redirect_uri=https://oauth.vk.com/blank.html&scope=" + 262144 + 65536 + "&response_type=token";
 		if ((Platform.isIosApp || Platform.isAndroidApp)) {
-			const electron = require('electron')
-			const bw = electron.BrowserWindow;
-			console.log(electron)
-			let p = document.createElement('p')
-			p.textContent = "Since I can't make WebView to work on Android, I must ask you to copy-paste auth link manually"
-			contentEl.appendChild(p)
-			let text = document.createElement('input')
-			contentEl.appendChild(text)
-			let a = document.createElement('a')
-			a.href = url
-			a.textContent = "Open auth window"
-			contentEl.appendChild(a)
+			contentEl.createEl('p', { text: "Since I can't make WebView to work on Android, you should login in external browser and copy-paste page link in the input field." })
+			new Setting(contentEl)
+				.addText((t) =>
+					t.onChange((t) =>
+						this.result = t)
+				)
 			new Setting(contentEl)
 				.addButton((btn) =>
 					btn
-						.setButtonText("Press this after granting access")
+						.setButtonText("Open auth window")
+						.setCta()
+						.setWarning()
+						.onClick(() => {
+							window.open(url)
+						})
+				);
+			new Setting(contentEl)
+				.addButton((btn) =>
+					btn
+						.setButtonText("Press this after pasting the link")
 						.setCta()
 						.setWarning()
 						.onClick(() => {
 							this.close();
-							this.onSubmit(text.textContent!);
+							this.onSubmit(this.result);
 
-						}));
-			window.open(url)
+						})
+				);
+
 			return
 		}
 		let b = document.createElement('webview')
-		new Setting(contentEl)
-			.addButton((btn) =>
-				btn
-					.setButtonText("Press this after granting access")
-					.setCta()
-					.setWarning()
-					.onClick(() => {
-						this.close();
-						this.onSubmit(b.getAttribute("src")!);
-					}));
-
+		b.addEventListener('did-stop-loading', (e) => {
+			let url = b.getAttribute("src")
+			if (url?.contains("https://oauth.vk.com/blank.html#access_token=")) {
+				this.close()
+				this.onSubmit(b.getAttribute("src")!)
+			}
+		})
 		b.setAttribute('src', url)
 		contentEl.appendChild(b)
 		b.setAttribute('useragent', "Mozilla/5.0 (Macintosh; U; Intel Mac OS X 10_5_6; en-US) AppleWebKit/603.25 (KHTML, like Gecko) Chrome/48.0.1971.300 Safari/537")
@@ -74,7 +75,7 @@ export class GetTokenModal extends Modal {
 
 interface VkNotifierSettings {
 	dateFormat: string;
-	
+
 	accessToken: string;
 	maxDays: number;
 	pinLast: boolean;
@@ -84,7 +85,7 @@ interface VkNotifierSettings {
 
 const DEFAULT_SETTINGS: VkNotifierSettings = {
 	accessToken: 'default',
-	
+
 	maxDays: 5,
 	pinLast: false,
 	style: `
@@ -116,7 +117,7 @@ export default class VkNotifier extends Plugin {
 		})
 		let j = JSON.parse(res)
 		let fitems
-		let items 
+		let items
 		try {
 
 			items = j["response"]["items"];
@@ -136,11 +137,11 @@ export default class VkNotifier extends Plugin {
 			}
 		}
 		if (fitems.length == 0) {
-			el.setText( "No new Posts")
+			el.setText("No new Posts")
 			return
 		}
 		let div = el.createDiv()
-		div.createEl("a",{href:"https://vk.com/' + (data['id'] ? 'club' + data['id'].trim() : data['name']) + '",text:"Open Page"})
+		div.createEl("a", { href: "https://vk.com/' + (data['id'] ? 'club' + data['id'].trim() : data['name']) + '", text: "Open Page" })
 		div.appendChild(this.formatPosts(fitems, this.settings.pinLast || data["pinLast"] == "true", parseInt(data["maxTextLength"] ? data["maxTextLength"] : this.settings.maxTextLength.toString()), data["dateFormat"] ? data["dateFormat"] : this.settings.dateFormat))
 		el.appendChild(div);
 		ctx.addChild(new MarkdownRenderChild(el))
@@ -148,17 +149,17 @@ export default class VkNotifier extends Plugin {
 	private formatPosts(item: any, pin: boolean, maxTextLength: number, dateFormat: string): HTMLElement {
 		maxTextLength = isNaN(maxTextLength) ? this.settings.maxTextLength : maxTextLength
 		let r = document.createElement("table")
-		let style = r.createEl("style",{text:this.settings.style})
+		let style = r.createEl("style", { text: this.settings.style })
 		r.className = "vkGroupNotifier"
 
 		item.forEach((e: { [x: string]: string; }, i: number) => {
 			let tr = r.createEl("tr")
-			tr.createEl("td",{text: moment.unix(e["date"] as unknown as number).format(dateFormat)})
-			tr.createEl('td',{text:e["text"].slice(0, maxTextLength)})
+			tr.createEl("td", { text: moment.unix(e["date"] as unknown as number).format(dateFormat) })
+			tr.createEl('td', { text: e["text"].slice(0, maxTextLength) })
 			if (i == 0 && pin) {
 				tr.className = "pinnedVkPost"
 			}
-			
+
 
 		});
 		r.appendChild(style)
