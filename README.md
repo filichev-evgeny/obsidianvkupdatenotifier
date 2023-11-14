@@ -5,8 +5,7 @@ This  plugin gives you ability to check new posts on the vk.com website
 ## How to use
 
 - **vk.com account is required**. you can log in in the settings tab of the plugin. The requested permissions are : groups, offline. The authorization is handled by vk.com, plugin have no access to user's login/pass.
-- create codeblock ``vk-group-notifier`` with "name:" argument. (use \``` at the begining of the block and \``` at the end )
-
+- create codeblock ``vk-group-notifier`` with "name:" argument. (use \``` at the begining of the block and \``` at the end ) (Check [Obsidian Markdown tutorial](https://help.obsidian.md/Editing+and+formatting/Basic+formatting+syntax#Code%20blocks) if you don't know how to do them)
 
 ```vk-group-notifier
   name:nameOfTheGroup
@@ -14,15 +13,11 @@ This  plugin gives you ability to check new posts on the vk.com website
 
 * if group has no short name, you can use its "id". if both "name" and "id" are present, "id" will be used.
 
-
-
 ```vk-group-notifier
 id: 12345
 ```
 
-
 * you can overwrite any specific parameters for each code section
-
 
 ```vk-group-notifier
  name:groupName
@@ -31,7 +26,6 @@ id: 12345
  maxTextLength:15
  dateFormat:DD-MMMM-YYYY
 ```
-
 
 ## Manually installing the plugin
 
