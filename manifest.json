@@ -1,7 +1,7 @@
 {
 	"id": "vk-group-notifier",
 	"name": "Vk group notifier",
-	"version": "1.0.0",
+	"version": "1.0.1",
 	"minAppVersion": "0.15.0",
 	"description": "Track news posts from the vk.com groups.",
 	"author": "Filichev.Evgeny",
