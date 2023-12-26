@@ -1,5 +1,5 @@
-import { App, MarkdownPostProcessorContext, MarkdownRenderChild, Modal, Notice, Platform, Plugin, PluginSettingTab, Setting, request } from 'obsidian';
-import moment from 'moment';
+import {moment, App, MarkdownPostProcessorContext, MarkdownRenderChild, Modal, Notice, Platform, Plugin, PluginSettingTab, Setting, request } from 'obsidian';
+
 
 
 const appId = 51781583;
@@ -141,7 +141,7 @@ export default class VkNotifier extends Plugin {
 			return
 		}
 		let div = el.createDiv()
-		div.createEl("a", { href: "https://vk.com/' + (data['id'] ? 'club' + data['id'].trim() : data['name']) + '", text: "Open Page" })
+		div.createEl("a", { href: "https://vk.com/" + (data['id'] ? 'club' + data['id'].trim() : data['name']), text: "Open Page" })
 		div.appendChild(this.formatPosts(fitems, this.settings.pinLast || data["pinLast"] == "true", parseInt(data["maxTextLength"] ? data["maxTextLength"] : this.settings.maxTextLength.toString()), data["dateFormat"] ? data["dateFormat"] : this.settings.dateFormat))
 		el.appendChild(div);
 		ctx.addChild(new MarkdownRenderChild(el))
